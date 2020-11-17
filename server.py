@@ -69,7 +69,7 @@ def send_receive_client_message(client_connection, client_ip_addr):
 
     # Successful authentication
     client_connection.send(
-        bytes(f"LOGIN_SUCCESS\n{client_name}\n{user_is_admin}\n\n", "utf-8"))
+        bytes(f"LOGIN_SUCCESS\n{client_name}\n\n", "utf-8"))
     online_users[user_id] = user_info["name"]
     
     send_online_users()
