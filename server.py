@@ -8,7 +8,7 @@ HOST_ADDR = "127.0.0.1"
 HOST_PORT = 8080
 client_name = " "
 clients = []
-clients_names = []
+clients_usernames = []
 
 
 # Start server function
@@ -36,11 +36,20 @@ def send_receive_client_message(client_connection, client_ip_addr):
     global server, client_name, clients, clients_addr
     client_msg = " "
 
-    client_name  = client_connection.recv(4096)
-    clients_names.append(client_name)
+    client_info  = client_connection.recv(4096)
+    client_name = str(client_info,"utf-8").split('\n')[0]
+    client_pass = str(client_info,"utf-8").split('\n')[1]
 
-    # sending Welcome message to client
-    client_connection.send(bytes("Welcome " + str(client_name, "utf-8") + ". Use 'exit' to quit", "utf-8"))
+    print(client_name)
+    print(client_pass)
+    clients_usernames.append(client_name)
+
+
+    auth = True
+
+    if(auth):
+        # sending Welcome message to client
+        client_connection.send(bytes("Welcome " + client_name + ". Use 'exit' to quit", "utf-8"))
 
     while True:
         data = client_connection.recv(4096)
@@ -53,7 +62,7 @@ def send_receive_client_message(client_connection, client_ip_addr):
         client_msg = data
 
         idx = get_client_index(clients, client_connection)
-        sending_client_name = clients_names[idx]
+        sending_client_name = clients_usernames[idx]
 
         for c in clients:
             if c != client_connection:
@@ -61,7 +70,7 @@ def send_receive_client_message(client_connection, client_ip_addr):
 
     # find the client index then remove from both lists(client name list and connection list)
     idx = get_client_index(clients, client_connection)
-    del clients_names[idx]
+    del clients_usernames[idx]
     del clients[idx]
     client_connection.close()
 

@@ -6,15 +6,17 @@ import threading
 window = tk.Tk()
 window.title("Client")
 username = " "
-
+password = " "
 
 topFrame = tk.Frame(window)
-lblName = tk.Label(topFrame, text = "Name:").pack(side=tk.LEFT)
-entName = tk.Entry(topFrame)
-entName.pack(side=tk.LEFT)
-btnConnect = tk.Button(topFrame, text="Connect", command=lambda : connect())
+loginName = tk.Label(topFrame, text = "UserName:").pack(side=tk.LEFT)
+entNameLogin = tk.Entry(topFrame)
+entNameLogin.pack(side=tk.LEFT)
+passwordName = tk.Label(topFrame, text = "Password:").pack(side=tk.LEFT)
+entNamePass = tk.Entry(topFrame)
+entNamePass.pack(side=tk.LEFT)
+btnConnect = tk.Button(topFrame, text="Login", command=lambda : connect())
 btnConnect.pack(side=tk.LEFT)
-#btnConnect.bind('<Button-1>', connect)
 topFrame.pack(side=tk.TOP)
 
 displayFrame = tk.Frame(window)
@@ -38,12 +40,13 @@ bottomFrame.pack(side=tk.BOTTOM)
 
 
 def connect():
-    global username, client
-    if len(entName.get()) < 1:
-        tk.messagebox.showerror(title="ERROR!!!", message="You MUST enter your first name <e.g. John>")
+    global username, password, client
+    if len(entNameLogin.get())<1 or len(entNamePass.get())<1:
+        tk.messagebox.showerror(title="ERROR!!!", message="Enter Your email/Password correctly")
     else:
-        username = entName.get()
-        connect_to_server(username)
+        username = entNameLogin.get()
+        password = entNamePass.get()
+        connect_to_server(username, password)
 
 
 # network client
@@ -51,14 +54,15 @@ client = None
 HOST_ADDR = "127.0.0.1"
 HOST_PORT = 8080
 
-def connect_to_server(name):
+def connect_to_server(name, pas):
     global client, HOST_PORT, HOST_ADDR
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((HOST_ADDR, HOST_PORT))
-        client.send(bytes(name,"utf-8")) # Send name to server after connecting
+        client.send(bytes(name+"\n"+pas,"utf-8")) # Send name to server after connecting
 
-        entName.config(state=tk.DISABLED)
+        entNameLogin.config(state=tk.DISABLED)
+        entNamePass.config(state=tk.DISABLED)
         btnConnect.config(state=tk.DISABLED)
         tkMessage.config(state=tk.NORMAL)
 
@@ -126,5 +130,3 @@ def send_mssage_to_server(msg):
 
 
 window.mainloop()
-
-
