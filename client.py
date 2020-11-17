@@ -101,9 +101,11 @@ def changePassword():
 
 
 def receive_message_from_server(sck, m):
+    buffer = ""
     while True:
-        from_server = sck.recv(4096)
-
+        buffer, from_server = receive_message(buffer, sck)
+        # from_server = sck.recv(4096)
+        print(from_server)
         if not from_server: break
 
         elif str(from_server,"utf-8").split('\n')[0]=="LOGIN_SUCCESS":
@@ -131,7 +133,7 @@ def receive_message_from_server(sck, m):
         tkDisplay.config(state=tk.DISABLED)
         tkDisplay.see(tk.END)
 
-        # print("Server says: " +from_server)
+        # print("Server says: " + from_server)
 
     sck.close()
     window.destroy()
@@ -173,5 +175,22 @@ def update_client_names_display(name_list):
     for c in name_list:
         ctkDisplay.insert(tk.END, c+"\n")
     ctkDisplay.config(state=tk.DISABLED)
+
+def receive_message(buffer, socket):
+    print(buffer)
+    breaker = buffer.find("\n\n")
+    if breaker != -1:
+        data = buffer[:breaker+1]
+        buffer = buffer[breaker+2:]
+        return buffer, bytes(data, "utf-8")
+    while True:
+        buffer += str(socket.recv(4096), "utf-8")
+        breaker = buffer.find("\n\n")
+        if breaker != -1:
+            data = buffer[:breaker+1]
+            buffer = buffer[breaker+2:]
+            break
+    return buffer, bytes(data, "utf-8")
+        
 
 window.mainloop()

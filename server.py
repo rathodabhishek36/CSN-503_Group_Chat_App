@@ -19,7 +19,7 @@ for user in list_users():
     user_id = user['pid']
     users[user_id] = user
 
-glock = threading.Lock()
+# glock = threading.Lock()
 
 def start_server():
     global server, HOST_ADDR, HOST_PORT
@@ -56,7 +56,7 @@ def send_receive_client_message(client_connection, client_ip_addr):
         user_info = authorise_user(client_name, client_password)
     except Exception as error:
         print(error)
-        client_connection.send(bytes("LOGIN_FAIL\n", "utf-8"))
+        client_connection.send(bytes("LOGIN_FAIL\n\n", "utf-8"))
         client_connection.close()
         sys.exit()
 
@@ -69,18 +69,16 @@ def send_receive_client_message(client_connection, client_ip_addr):
 
     # Successful authentication
     client_connection.send(
-        bytes(f"LOGIN_SUCCESS\n{client_name}\n{user_is_admin}\n", "utf-8"))
+        bytes(f"LOGIN_SUCCESS\n{client_name}\n{user_is_admin}\n\n", "utf-8"))
     online_users[user_id] = user_info["name"]
     
-    glock.acquire()
     send_online_users()
-    glock.release()
 
     # Send previous messages
     messages = list_messages()
     for message in messages:
         client_connection.send(bytes(
-            f"{users.get(message['sid'], {'name': 'Anonymous'})['name']} -> {message['data']}", "utf-8"))
+            f"{users.get(message['sid'], {'name': 'Anonymous'})['name']} -> {message['data']}\n\n", "utf-8"))
 
     while True:
         message = client_connection.recv(4096)
@@ -103,14 +101,14 @@ def send_receive_client_message(client_connection, client_ip_addr):
             data = fields[0]
 
         client_msg = data
-        add_message(user_id, data+"\n")
+        add_message(user_id, data)
         # idx = get_client_index(clients, client_connection)
         sending_client_name = client_name
 
         for user_id, connection in connections.items():
             if connection != client_connection:
                 connection.send(bytes(sending_client_name +
-                                      "->" + client_msg, "utf-8"))
+                                      "->" + client_msg + "\n\n", "utf-8"))
 
     # users.pop(user_id)
     if connections.get(user_id, None): connections.pop(user_id)
@@ -123,7 +121,7 @@ def send_online_users():
     for connection in connections.values(): # Update other users about online users
         user_words = "\n".join(list(online_users.values()))
         try:
-            connection.send(bytes(f'ONLINE_USERS\n{user_words}', "utf-8"))
+            connection.send(bytes(f'ONLINE_USERS\n{user_words}\n\n', "utf-8"))
         except: # To avoid multiple connection closes at the same time
             pass
 
@@ -143,10 +141,10 @@ def handle_control_message(user_info, header, data):
         password = data
         try:
             update_password(user_id, password)
-            return "CHANGE_PWD_SUCCESS\n"
+            return "CHANGE_PWD_SUCCESS\n\n"
         except Exception as error:
             print(error)
-            return "CHANGE_PWD_FAIL\n"
+            return "CHANGE_PWD_FAIL\n\n"
 
 
 def main():
