@@ -19,6 +19,8 @@ for user in list_users():
     user_id = user['pid']
     users[user_id] = user
 
+glock = threading.Lock()
+
 def start_server():
     global server, HOST_ADDR, HOST_PORT
 
@@ -69,9 +71,10 @@ def send_receive_client_message(client_connection, client_ip_addr):
     client_connection.send(
         bytes(f"LOGIN_SUCCESS\n{client_name}\n{user_is_admin}\n", "utf-8"))
     online_users[user_id] = user_info["name"]
-    for connection in connections.values(): # Update other users about online users
-        user_words = "\n".join(list(online_users.values()))
-        connection.send(bytes(f'ONLINE_USERS\n{user_words}', "utf-8"))
+    
+    glock.acquire()
+    send_online_users()
+    glock.release()
 
     # Send previous messages
     messages = list_messages()
@@ -110,12 +113,19 @@ def send_receive_client_message(client_connection, client_ip_addr):
                                       "->" + client_msg, "utf-8"))
 
     # users.pop(user_id)
-    connections.pop(user_id)
-    online_users.pop(user_id)
+    if connections.get(user_id, None): connections.pop(user_id)
+    if online_users.get(user_id, None): online_users.pop(user_id)
     client_connection.close()
+
+    send_online_users()
+
+def send_online_users():
     for connection in connections.values(): # Update other users about online users
         user_words = "\n".join(list(online_users.values()))
-        connection.send(bytes(f'ONLINE_USERS\n{user_words}', "utf-8"))
+        try:
+            connection.send(bytes(f'ONLINE_USERS\n{user_words}', "utf-8"))
+        except: # To avoid multiple connection closes at the same time
+            pass
 
 def get_client_connection(user_id):
     return connections[user_id]

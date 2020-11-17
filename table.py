@@ -147,8 +147,8 @@ def list_messages():  # Can add time range based message lists afterwards
     )
     messages = []
     for row in cursor:
-        mid, sid, date, data = row[0], row[1], row[2], row[3]
-        messages.append({"mid": mid, "sid": sid, "date": date, "data": data})
+        mid, sid, data = row[0], row[1], row[2]
+        messages.append({"mid": mid, "sid": sid, "data": data})
     return messages
 
 def add_message(user_id, message):
@@ -159,7 +159,7 @@ def add_message(user_id, message):
     execute_statement(
         f"""
         INSERT INTO messages 
-        VALUES (NULL, '{user_id}', NULL, '{message}')
+        VALUES (NULL, '{user_id}', '{message}')
         """
     )
     connection.commit()
