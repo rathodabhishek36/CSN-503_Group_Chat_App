@@ -2,6 +2,7 @@ import tkinter as tk
 import socket
 import threading
 from table import list_messages, authorise_user, add_message, update_password, list_users, list_messages
+import sys
 
 server = None
 HOST_ADDR = "127.0.0.1"
@@ -51,6 +52,7 @@ def send_receive_client_message(client_connection, client_ip_addr):
         print(error)
         client_connection.send(bytes("LOGIN_FAIL\n", "utf-8"))
         client_connection.close()
+        sys.exit()
 
     client_name = user_info["name"]
     user_id = user_info["pid"]
