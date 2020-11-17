@@ -1,6 +1,8 @@
 import sqlite3
+from datetime import timezone 
+import datetime 
 
-connection = sqlite3.connect("data.db")
+connection = sqlite3.connect("data.db", check_same_thread=False)
 
 print("Opened database")
 
@@ -30,30 +32,31 @@ execute_statement(
 CREATE TABLE messages (
     mid             INTEGER PRIMARY KEY,
     sender          INT NOT NULL,
-    date            INT NOT NULL,
+    date            DATETIME DEFAULT CURRENT_TIMESTAMP,
     data            CHAR(256),
     FOREIGN KEY     (sender) REFERENCES users(pid) ON DELETE CASCADE
 );"""
 )
 
 
-def authorise_user(user, enr_no, password):
+def authorise_user(name, password, enr_no=None):
     """
     Login the user using the enrollment number or the username
     """
-    pass
+    cursor = execute_statement(f"""
+        SELECT * FROM users
+        WHERE name='{name}' AND password='{password}'
+    """)
 
+    if cursor.rowcount == 0:
+        raise Exception("No such user")
 
-def add_message(user_id, text):
-    """
-    Add a message to the database
-    """
-    
+    for row in cursor:
+        pid, name, enr_no, is_admin = row[0], row[1], row[2], row[3]
+        break
 
-
-def fetch_messages():
-    pass
-
+    return {"pid": pid, "name": name, "enr_no": enr_no, "is_admin": bool(is_admin)}
+  
 
 def add_user(*args, **kwargs):
     name = kwargs.get("name", None)
@@ -105,9 +108,9 @@ def update_password(pid, password):
         raise Exception("Empty passwords aren't allowed")
 
     cursor = execute_statement(
-        """
+        f"""
         UPDATE users
-        SET password={password}
+        SET password='{password}'
         WHERE pid={pid}
         """
     )
@@ -127,7 +130,8 @@ def list_users():
     for row in cursor:
         pid, name, enr_no, is_admin = row[0], row[1], row[2], row[3]
         users.append(
-            {"pid": pid, "name": name, "enr_no": enr_no, "is_admin": bool(is_admin)}
+            {"pid": pid, "name": name, "enr_no": enr_no,
+                "is_admin": bool(is_admin)}
         )
     return users
 
@@ -139,6 +143,7 @@ def list_messages():  # Can add time range based message lists afterwards
     cursor = execute_statement(
         """
         SELECT * FROM messages
+        ORDER BY date
         """
     )
     messages = []
@@ -146,3 +151,16 @@ def list_messages():  # Can add time range based message lists afterwards
         mid, sid, date, data = row[0], row[1], row[2], row[3]
         messages.append({"mid": mid, "sid": sid, "date": date, "data": data})
     return messages
+
+def add_message(user_id, message):
+    """
+    Add a new message to the database
+    """
+
+    execute_statement(
+        f"""
+        INSERT INTO messages 
+        VALUES (NULL, '{user_id}', NULL, '{message}')
+        """
+    )
+    connection.commit()

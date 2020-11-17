@@ -1,7 +1,7 @@
 import tkinter as tk
 import socket
 import threading
-
+from table import list_messages, authorise_user, add_message, update_password, list_users, list_messages
 
 server = None
 HOST_ADDR = "127.0.0.1"
@@ -10,6 +10,11 @@ client_name = " "
 clients = []
 clients_usernames = []
 
+connections = dict()
+users = dict()
+
+for user in list_users():
+    users[user['pid']] = user
 
 # Start server function
 def start_server():
@@ -21,7 +26,6 @@ def start_server():
     # server is listening for client connection
     server.listen(5)  
     accept_clients(server)    
-    # threading._start_new_thread(accept_clients, (server," "))
 
 def accept_clients(the_server):
     while True:
@@ -30,70 +34,91 @@ def accept_clients(the_server):
         threading._start_new_thread(send_receive_client_message,(client,addr))
 
         
-# Function to receive message from current client and
-# Send that message to other clients
+# Function to receive message from current client
 def send_receive_client_message(client_connection, client_ip_addr):
-    global server, client_name, clients, clients_addr
+    global server, clients
     client_msg = " "
 
+    # Authentication method
     client_info  = client_connection.recv(4096)
-    message_type = str(client_info,"utf-8").split('\n')[0]
+    client_name = str(client_info,"utf-8").split('\n')[1]
+    client_password = str(client_info,"utf-8").split('\n')[2]
 
-    if message_type == "LOGINPASS": 
-        client_name = str(client_info,"utf-8").split('\n')[1]
-        client_pass = str(client_info,"utf-8").split('\n')[2]
+    print(client_name, client_password)
+    try:
+        user_info = authorise_user(client_name, client_password)
+    except Exception as error:
+        print(error)
+        client_connection.send(bytes("LOGIN_FAIL\n", "utf-8"))
+        client_connection.close()
 
-        print(client_name)
-        print(client_pass)
-        clients_usernames.append(bytes(client_name,"utf-8"))
+    client_name = user_info["name"]
+    user_id = user_info["pid"]
+    user_is_admin = user_info["is_admin"]
 
+    # clients_names.append(client_name)
+    add_client_connection(user_id, user_info, client_connection)
 
-    auth = True
+  
+    # Successful authentication
+    client_connection.send(bytes(f"LOGIN_SUCCESS\n{client_name}\n{user_is_admin}\n", "utf-8"))    
 
-    if(auth):
-        # sending Welcome message to client
-        client_connection.send(bytes("LOGIN_SUCCESS\nWelcome " + client_name + ". Use 'exit' to quit", "utf-8"))
+    # Send previous messages
+    messages = list_messages()
+    for message in messages:
+        client_connection.send(bytes(f"{users.get(message['sid'], {'name': 'Anonymous'})['name']} -> {message['data']}", "utf-8"))
 
     while True:
-        data = client_connection.recv(4096)
+        message = client_connection.recv(4096)
 
-        if not data: 
+        if not message: 
             break
-        if str(data,"utf-8") == "exit": 
+        if str(message,"utf-8") == "exit": 
             break
+        
+        message = str(message, "utf-8")
+        fields = message.split("\n")
 
-        if str(data,"utf-8").split('\n')[0] == "CHANGE_PASS":
-            client_msg = str(data,"utf-8").split('\n')[1]
-            # write the code to change the password in database
-            client_connection.send(bytes("PWD_CHANGE_SUCCESS\nYour password has been changed succesfully "+client_name ,"utf-8"))
+        if len(fields) > 1: # Header is present
+            header = fields[0]
+            data = fields[1]
+            message = handle_control_message(user_info, header, data)
+            client_connection.send(bytes(message, "utf-8"))
             continue
-
+        else:
+            data = fields[0]
+            
         client_msg = data
+        add_message(user_id, data+"\n")
+        # idx = get_client_index(clients, client_connection)
+        sending_client_name = client_name
 
-        idx = get_client_index(clients, client_connection)
-        sending_client_name = clients_usernames[idx]
+        for user_id, connection in connections.items():
+            if connection != client_connection:
+                connection.send(bytes(sending_client_name + "->" + client_msg,"utf-8"))
 
-        for c in clients:
-            if c != client_connection:
-                c.send(bytes(str(sending_client_name,"utf-8") + "->" + str(client_msg,"utf-8"),"utf-8"))
-
-    # find the client index then remove from both lists(client name list and connection list)
-    idx = get_client_index(clients, client_connection)
-    del clients_usernames[idx]
-    del clients[idx]
+    # users.pop(user_id)
+    connections.pop(user_id)
     client_connection.close()
 
+def get_client_connection(user_id):
+    return connections[user_id]
 
-# Return the index of the current client in the list of clients
-def get_client_index(client_list, curr_client):
-    idx = 0
-    for conn in client_list:
-        if conn == curr_client:
-            break
-        idx = idx + 1
+def add_client_connection(user_id, user_info, connection):
+    connections[user_id] = connection
+    if user_id not in users:
+        users[user_id] = user_info
 
-    return idx
-
+def handle_control_message(user_info, header, data):
+    if header == "CHANGE_PASS":
+        user_id = user_info["pid"]
+        password = data
+        try:
+            update_password(user_id, password)
+            return "CHANGE_PWD_SUCCESS\n"
+        except Exception as error:
+            print(error)
+            return "CHANGE_PWD_FAIL\n"
 
 def main():
     print("Server File Started")

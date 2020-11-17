@@ -12,7 +12,7 @@ command_name = args[1]
 if command_name == "createsuperuser":
     username = input("username: ")
     password = input("password: ")
-
+    enr_no = input("enrollment number: ")
     try:
         add_user(name=username, password=password, enr_no=enr_no, is_admin=True)
     except Exception as error:
