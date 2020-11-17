@@ -12,7 +12,7 @@ def execute_statement(statement):
     try:
         cursor = connection.execute(statement)
     except sqlite3.OperationalError as error:
-        print(error)
+        print("SQL error", error)
     return cursor
 
 
@@ -30,9 +30,8 @@ CREATE TABLE users (
 execute_statement(
     """
 CREATE TABLE messages (
-    mid             INTEGER PRIMARY KEY,
+    mid             INTEGER PRIMARY KEY NOT NULL,
     sender          INT NOT NULL,
-    date            DATETIME DEFAULT CURRENT_TIMESTAMP,
     data            CHAR(256),
     FOREIGN KEY     (sender) REFERENCES users(pid) ON DELETE CASCADE
 );"""
@@ -143,7 +142,7 @@ def list_messages():  # Can add time range based message lists afterwards
     cursor = execute_statement(
         """
         SELECT * FROM messages
-        ORDER BY date
+        ORDER BY mid
         """
     )
     messages = []

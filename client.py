@@ -45,6 +45,16 @@ tkMessage.config(highlightbackground="grey", state="disabled")
 tkMessage.bind("<Return>", (lambda event: getChatMessage(tkMessage.get("1.0", tk.END))))
 bottomFrame.pack(side=tk.BOTTOM)
 
+# The client frame shows the client area
+clientFrame = tk.Frame(window)
+tk.Label(clientFrame, text="********** Client List **********").pack()
+cscrollBar = tk.Scrollbar(clientFrame)
+cscrollBar.pack(side=tk.RIGHT, fill=tk.Y)
+ctkDisplay = tk.Text(clientFrame, height=15, width=30)
+ctkDisplay.pack(side=tk.LEFT, fill=tk.Y, padx=(5, 0))
+cscrollBar.config(command=tkDisplay.yview)
+ctkDisplay.config(yscrollcommand=scrollBar.set, background="#F4F6F7", highlightbackground="grey", state="disabled")
+clientFrame.pack(side=tk.BOTTOM, pady=(5, 10))
 
 def connect():
     global username, password, client
@@ -103,6 +113,11 @@ def receive_message_from_server(sck, m):
         elif str(from_server,"utf-8").split('\n')[0]=="PWD_CHANGE_SUCCESS":
             password = new_pass
 
+        elif str(from_server, "utf-8").split('\n')[0] =="ONLINE_USERS":
+            user_list = str(from_server, "utf-8").split('\n')[1:]
+            print(user_list)
+            update_client_names_display(user_list)
+            continue
         # display message from server on the chat window
 
 
@@ -149,5 +164,14 @@ def send_mssage_to_server(msg):
         window.destroy()
     print("Sending message")
 
+# Update client name display when a new client connects OR
+# When a connected client disconnects
+def update_client_names_display(name_list):
+    ctkDisplay.config(state=tk.NORMAL)
+    ctkDisplay.delete('1.0', tk.END)
+
+    for c in name_list:
+        ctkDisplay.insert(tk.END, c+"\n")
+    ctkDisplay.config(state=tk.DISABLED)
 
 window.mainloop()

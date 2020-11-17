@@ -13,37 +13,41 @@ clients_usernames = []
 
 connections = dict()
 users = dict()
+online_users = dict()
 
 for user in list_users():
-    users[user['pid']] = user
+    user_id = user['pid']
+    users[user_id] = user
 
-# Start server function
 def start_server():
-    global server, HOST_ADDR, HOST_PORT 
-    
+    global server, HOST_ADDR, HOST_PORT
+
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((HOST_ADDR, HOST_PORT))
 
     # server is listening for client connection
-    server.listen(5)  
-    accept_clients(server)    
+    server.listen(5)
+
+    accept_clients(server)
+
 
 def accept_clients(the_server):
     while True:
         client, addr = the_server.accept()
         clients.append(client)
-        threading._start_new_thread(send_receive_client_message,(client,addr))
+        threading._start_new_thread(
+            send_receive_client_message, (client, addr))
 
-        
+
 # Function to receive message from current client
 def send_receive_client_message(client_connection, client_ip_addr):
     global server, clients
     client_msg = " "
 
     # Authentication method
-    client_info  = client_connection.recv(4096)
-    client_name = str(client_info,"utf-8").split('\n')[1]
-    client_password = str(client_info,"utf-8").split('\n')[2]
+    client_info = client_connection.recv(4096)
+    client_name = str(client_info, "utf-8").split('\n')[1]
+    client_password = str(client_info, "utf-8").split('\n')[2]
 
     print(client_name, client_password)
     try:
@@ -61,27 +65,32 @@ def send_receive_client_message(client_connection, client_ip_addr):
     # clients_names.append(client_name)
     add_client_connection(user_id, user_info, client_connection)
 
-  
     # Successful authentication
-    client_connection.send(bytes(f"LOGIN_SUCCESS\n{client_name}\n{user_is_admin}\n", "utf-8"))    
+    client_connection.send(
+        bytes(f"LOGIN_SUCCESS\n{client_name}\n{user_is_admin}\n", "utf-8"))
+    online_users[user_id] = user_info["name"]
+    for connection in connections.values(): # Update other users about online users
+        user_words = "\n".join(list(online_users.values()))
+        connection.send(bytes(f'ONLINE_USERS\n{user_words}', "utf-8"))
 
     # Send previous messages
     messages = list_messages()
     for message in messages:
-        client_connection.send(bytes(f"{users.get(message['sid'], {'name': 'Anonymous'})['name']} -> {message['data']}", "utf-8"))
+        client_connection.send(bytes(
+            f"{users.get(message['sid'], {'name': 'Anonymous'})['name']} -> {message['data']}", "utf-8"))
 
     while True:
         message = client_connection.recv(4096)
 
-        if not message: 
+        if not message:
             break
-        if str(message,"utf-8") == "exit": 
+        if str(message, "utf-8") == "exit":
             break
-        
+
         message = str(message, "utf-8")
         fields = message.split("\n")
 
-        if len(fields) > 1: # Header is present
+        if len(fields) > 1:  # Header is present
             header = fields[0]
             data = fields[1]
             message = handle_control_message(user_info, header, data)
@@ -89,7 +98,7 @@ def send_receive_client_message(client_connection, client_ip_addr):
             continue
         else:
             data = fields[0]
-            
+
         client_msg = data
         add_message(user_id, data+"\n")
         # idx = get_client_index(clients, client_connection)
@@ -97,19 +106,26 @@ def send_receive_client_message(client_connection, client_ip_addr):
 
         for user_id, connection in connections.items():
             if connection != client_connection:
-                connection.send(bytes(sending_client_name + "->" + client_msg,"utf-8"))
+                connection.send(bytes(sending_client_name +
+                                      "->" + client_msg, "utf-8"))
 
     # users.pop(user_id)
     connections.pop(user_id)
+    online_users.pop(user_id)
     client_connection.close()
+    for connection in connections.values(): # Update other users about online users
+        user_words = "\n".join(list(online_users.values()))
+        connection.send(bytes(f'ONLINE_USERS\n{user_words}', "utf-8"))
 
 def get_client_connection(user_id):
     return connections[user_id]
+
 
 def add_client_connection(user_id, user_info, connection):
     connections[user_id] = connection
     if user_id not in users:
         users[user_id] = user_info
+
 
 def handle_control_message(user_info, header, data):
     if header == "CHANGE_PASS":
@@ -122,6 +138,7 @@ def handle_control_message(user_info, header, data):
             print(error)
             return "CHANGE_PWD_FAIL\n"
 
+
 def main():
     print("Server File Started")
     start_server()
@@ -129,3 +146,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
