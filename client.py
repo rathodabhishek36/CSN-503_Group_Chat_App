@@ -184,7 +184,11 @@ def receive_message(buffer, socket):
         buffer = buffer[breaker+2:]
         return buffer, bytes(data, "utf-8")
     while True:
-        buffer += str(socket.recv(4096), "utf-8")
+        new_data = str(socket.recv(4096), "utf-8")
+        buffer += new_data
+        if not new_data:
+            exit(1)
+
         breaker = buffer.find("\n\n")
         if breaker != -1:
             data = buffer[:breaker+1]
