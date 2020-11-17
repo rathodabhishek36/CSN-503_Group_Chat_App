@@ -37,19 +37,22 @@ def send_receive_client_message(client_connection, client_ip_addr):
     client_msg = " "
 
     client_info  = client_connection.recv(4096)
-    client_name = str(client_info,"utf-8").split('\n')[0]
-    client_pass = str(client_info,"utf-8").split('\n')[1]
+    message_type = str(client_info,"utf-8").split('\n')[0]
 
-    print(client_name)
-    print(client_pass)
-    clients_usernames.append(client_name)
+    if message_type == "LOGINPASS": 
+        client_name = str(client_info,"utf-8").split('\n')[1]
+        client_pass = str(client_info,"utf-8").split('\n')[2]
+
+        print(client_name)
+        print(client_pass)
+        clients_usernames.append(bytes(client_name,"utf-8"))
 
 
     auth = True
 
     if(auth):
         # sending Welcome message to client
-        client_connection.send(bytes("Welcome " + client_name + ". Use 'exit' to quit", "utf-8"))
+        client_connection.send(bytes("LOGIN_SUCCESS\nWelcome " + client_name + ". Use 'exit' to quit", "utf-8"))
 
     while True:
         data = client_connection.recv(4096)
@@ -58,6 +61,12 @@ def send_receive_client_message(client_connection, client_ip_addr):
             break
         if str(data,"utf-8") == "exit": 
             break
+
+        if str(data,"utf-8").split('\n')[0] == "CHANGE_PASS":
+            client_msg = str(data,"utf-8").split('\n')[1]
+            # write the code to change the password in database
+            client_connection.send(bytes("PWD_CHANGE_SUCCESS\nYour password has been changed succesfully "+client_name ,"utf-8"))
+            continue
 
         client_msg = data
 

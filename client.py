@@ -7,6 +7,7 @@ window = tk.Tk()
 window.title("Client")
 username = " "
 password = " "
+new_pass = " "
 
 topFrame = tk.Frame(window)
 loginName = tk.Label(topFrame, text = "UserName:").pack(side=tk.LEFT)
@@ -21,6 +22,12 @@ topFrame.pack(side=tk.TOP)
 
 displayFrame = tk.Frame(window)
 lblLine = tk.Label(displayFrame, text="*********************************************************************").pack()
+btnChangePass = tk.Button(displayFrame, text="Change Password", command=lambda : changePassword())
+btnChangePass.pack(side=tk.TOP)
+btnChangePass.config(state=tk.DISABLED)
+chgPass = tk.Entry(displayFrame)
+chgPass.pack(side=tk.TOP)
+chgPass.config(state=tk.DISABLED)
 scrollBar = tk.Scrollbar(displayFrame)
 scrollBar.pack(side=tk.RIGHT, fill=tk.Y)
 tkDisplay = tk.Text(displayFrame, height=20, width=55)
@@ -59,7 +66,7 @@ def connect_to_server(name, pas):
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((HOST_ADDR, HOST_PORT))
-        client.send(bytes(name+"\n"+pas,"utf-8")) # Send name to server after connecting
+        client.send(bytes("LOGINPASS\n"+name+"\n"+pas,"utf-8")) # Send name to server after connecting
 
         entNameLogin.config(state=tk.DISABLED)
         entNamePass.config(state=tk.DISABLED)
@@ -67,10 +74,20 @@ def connect_to_server(name, pas):
         tkMessage.config(state=tk.NORMAL)
 
         # start a thread to keep receiving message from server
-        # do not block the main thread :)
         threading._start_new_thread(receive_message_from_server, (client, "m"))
     except Exception as e:
         tk.messagebox.showerror(title="ERROR!!!", message="Cannot connect to host: " + HOST_ADDR + " on port: " + str(HOST_PORT) + " Server may be Unavailable. Try again later")
+
+
+def changePassword():
+    try:
+        if len(chgPass.get())<1:
+            tk.messagebox.showerror(title="ERROR!!!", message="Enter a longer new Password")
+        else :
+            new_pass = chgPass.get()
+            send_mssage_to_server("CHANGE_PASS\n"+new_pass)
+    except Exception as e:
+        tk.messagebox.showerror(title="ERROR!!!", message="NOT ABLE TO CHANGE THE PASSWORD. RETRY !!!")
 
 
 def receive_message_from_server(sck, m):
@@ -79,10 +96,16 @@ def receive_message_from_server(sck, m):
 
         if not from_server: break
 
+        elif str(from_server,"utf-8").split('\n')[0]=="LOGIN_SUCCESS":
+            btnChangePass.config(state=tk.NORMAL)
+            chgPass.config(state=tk.NORMAL)
+
+        elif str(from_server,"utf-8").split('\n')[0]=="PWD_CHANGE_SUCCESS":
+            password = new_pass
+
         # display message from server on the chat window
 
-        # enable the display area and insert the text and then disable.
-        # why? Apparently, tkinter does not allow us insert into a disabled Text widget :(
+
         texts = tkDisplay.get("1.0", tk.END).strip()
         tkDisplay.config(state=tk.NORMAL)
         if len(texts) < 1:
@@ -104,8 +127,6 @@ def getChatMessage(msg):
     msg = msg.replace('\n', '')
     texts = tkDisplay.get("1.0", tk.END).strip()
 
-    # enable the display area and insert the text and then disable.
-    # why? Apparently, tkinter does not allow use insert into a disabled Text widget :(
     tkDisplay.config(state=tk.NORMAL)
     if len(texts) < 1:
         tkDisplay.insert(tk.END, "You->" + msg, "tag_your_message") # no line
