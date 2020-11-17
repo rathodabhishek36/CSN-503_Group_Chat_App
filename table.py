@@ -12,7 +12,7 @@ def execute_statement(statement):
     try:
         cursor = connection.execute(statement)
     except sqlite3.OperationalError as error:
-        print("SQL error", error)
+        print("update: ", error)
     return cursor
 
 
