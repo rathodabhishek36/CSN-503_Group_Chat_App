@@ -1,0 +1,19 @@
+﻿	
+
+
+HELP FILE :-
+
+
+The commands.py contains the command line functions that can be executed by the admin to add and delete users.
+
+Execute the following commands to run the application :-
+
+python3 commands.py registerstudent
+// This commands helps register a student
+
+Once students are registered, we can run the client and server code files to start the group chat application.
+
+Run the following commands to run the client and server code files in different terminals :-
+
+python3 client.py
+python3 server.py
