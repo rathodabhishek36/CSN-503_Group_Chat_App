@@ -47,7 +47,7 @@ def authorise_user(name, password, enr_no=None):
     """
     Login the user using the enrollment number or the username
     """
-    password_hash = crypt.crypt('alice', secret)
+    password_hash = crypt.crypt(password, secret)
     cursor = execute_statement(f"""
         SELECT * FROM users
         WHERE name='{name}' AND password='{password_hash}'
@@ -57,7 +57,7 @@ def authorise_user(name, password, enr_no=None):
         raise Exception("No such user")
 
     for row in cursor:
-        pid, name, enr_no, is_admin = row[0], row[1], row[2], row[3]
+        pid, name, enr_no, password, is_admin = row[0], row[1], row[2], row[3], row[4]
         break
 
     return {"pid": pid, "name": name, "enr_no": enr_no, "is_admin": bool(is_admin)}
@@ -69,7 +69,7 @@ def add_user(*args, **kwargs):
     password = kwargs.get("password", None)
     is_admin = kwargs.get("is_admin", False)
 
-    password_hash = crypt.crypt('alice', secret)
+    password_hash = crypt.crypt(password, secret)
     if name is None or password is None:
         raise Exception("Please give proper name and password")
 
@@ -113,7 +113,7 @@ def update_password(pid, password):
     elif password is None:
         raise Exception("Empty passwords aren't allowed")
     
-    password_hash = crypt.crypt('alice', secret)
+    password_hash = crypt.crypt(password, secret)
     cursor = execute_statement(
         f"""
         UPDATE users
@@ -135,10 +135,11 @@ def list_users():
     )
     users = []
     for row in cursor:
-        pid, name, enr_no, is_admin = row[0], row[1], row[2], row[3]
+        pid, name, enr_no, password, is_admin = row[0], row[1], row[2], row[3], row[4]
         users.append(
             {"pid": pid, "name": name, "enr_no": enr_no,
-                "is_admin": bool(is_admin)}
+                "is_admin": bool(is_admin), "password": password
+            }
         )
     return users
 
