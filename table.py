@@ -1,8 +1,13 @@
 import sqlite3
 from datetime import timezone 
 import datetime 
+import yaml
+import crypt
 
 connection = sqlite3.connect("data.db", check_same_thread=False)
+conf_data = yaml.load(open("conf.yaml"), Loader=yaml.FullLoader)
+
+secret = conf_data['secret']
 
 print("Opened database")
 
@@ -22,7 +27,7 @@ CREATE TABLE users (
     pid             INTEGER PRIMARY KEY NOT NULL,
     name            TEXT NOT NULL,
     enr_no          INT, 
-    password        CHAR(50) NOT NULL,
+    password        CHAR(256) NOT NULL,
     is_admin        BIT
 );"""
 )
@@ -42,9 +47,10 @@ def authorise_user(name, password, enr_no=None):
     """
     Login the user using the enrollment number or the username
     """
+    password_hash = crypt.crypt('alice', secret)
     cursor = execute_statement(f"""
         SELECT * FROM users
-        WHERE name='{name}' AND password='{password}'
+        WHERE name='{name}' AND password='{password_hash}'
     """)
 
     if cursor.rowcount == 0:
@@ -63,6 +69,7 @@ def add_user(*args, **kwargs):
     password = kwargs.get("password", None)
     is_admin = kwargs.get("is_admin", False)
 
+    password_hash = crypt.crypt('alice', secret)
     if name is None or password is None:
         raise Exception("Please give proper name and password")
 
@@ -72,7 +79,7 @@ def add_user(*args, **kwargs):
     execute_statement(
         f"""
     INSERT INTO users
-    VALUES (NULL, '{name}', '{enr_no}', '{password}', {is_admin})
+    VALUES (NULL, '{name}', '{enr_no}', '{password_hash}', {is_admin})
     """
     )
     connection.commit()
@@ -105,11 +112,12 @@ def update_password(pid, password):
         raise Exception("No user id was passed")
     elif password is None:
         raise Exception("Empty passwords aren't allowed")
-
+    
+    password_hash = crypt.crypt('alice', secret)
     cursor = execute_statement(
         f"""
         UPDATE users
-        SET password='{password}'
+        SET password='{password_hash}'
         WHERE pid={pid}
         """
     )
